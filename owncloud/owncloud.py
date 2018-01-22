@@ -629,15 +629,35 @@ class Client(object):
         file_handle.close()
         return result
 
-    def mkdir(self, path):
+    def mkdir(self, path, create_parents=False, max_iter=999):
         """Creates a remote directory
 
         :param path: path to the remote directory to create
+        :param create_parens: create all parent folders if not existing
+        :param max_iter: maximum numbers of iterations when create_parents
         :returns: True if the operation succeeded, False otherwise
         :raises: HTTPResponseError in case an HTTP error status was returned
         """
         if not path.endswith('/'):
             path += '/'
+        
+        if create_parents:
+            path_parent = path
+            res = None
+            while res is None:
+                max_iter -= 1
+                if max_iter <=0:
+                    break
+                try:
+                    res = self._make_dav_request('MKCOL', path_parent)
+                    if path_parent != path:
+                        path_parent = path_parent + path.split('/')[len(path_parent.split('/')) - 1] + '/'
+                        res = None
+                    else:
+                        return res
+                except:
+                    path_parent = path_parent.rsplit('/', 2)[0] + '/'
+            
         return self._make_dav_request('MKCOL', path)
 
     def delete(self, path):
